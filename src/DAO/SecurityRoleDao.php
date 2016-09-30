@@ -122,4 +122,38 @@ class SecurityRoleDao implements RoleDao
     {
         return new Role($roleBean->getId(), $roleBean->getLabel());
     }
+
+    /**
+     * Returns a list of users, as a Porpaginas result.
+     * This list can be filtered based on the $filters array, that can be really anything based on the filters you implement.
+     *
+     * @param array $filters
+     * @param $orderBy
+     * @param $direction
+     * @return Result
+     */
+    public function search(array $filters, $orderBy, $direction) : Result
+    {
+        if ($orderBy) {
+            if (!in_array($orderBy, ['id, label'])) {
+                throw new InvalidArgumentException('Invalid order by criterion');
+            }
+        }
+        if ($direction) {
+            if (!in_array($direction, ['asc, desc'])) {
+                throw new InvalidArgumentException('Invalid direction');
+            }
+        }
+
+        $sql = null;
+        $parameters = [];
+        if (isset($filters['q'])) {
+            $sql = 'label LIKE :label';
+            $parameters = [
+                'label' => '%'.$filters['q'].'%'
+            ];
+        }
+
+        return $this->tdbmService->findObjects('roles', $sql, $parameters, $orderBy.' '.$direction);
+    }
 }
