@@ -17,13 +17,15 @@ use Mouf\Security\RightsService\RightInterface;
 use Mouf\Security\RightsService\RightsDaoInterface;
 use Mouf\Security\UserManagement\Api\RoleDao;
 use Mouf\Security\UserManagement\Api\RoleInterface;
+use Mouf\Security\UserManagement\Api\RoleListDao;
 use Mouf\Security\UserService\UserDaoInterface;
 use Mouf\Security\UserService\UserInterface;
+use Porpaginas\Result;
 
 /**
  * This class provides a TDBM implementation of the RoleDao interface.
  */
-class SecurityRoleDao implements RoleDao
+class SecurityRoleDao implements RoleDao, RoleListDao
 {
     /**
      * @var TDBMService
@@ -135,12 +137,12 @@ class SecurityRoleDao implements RoleDao
     public function search(array $filters, $orderBy, $direction) : Result
     {
         if ($orderBy) {
-            if (!in_array($orderBy, ['id, label'])) {
+            if (!in_array($orderBy, ['id', 'label'])) {
                 throw new InvalidArgumentException('Invalid order by criterion');
             }
         }
         if ($direction) {
-            if (!in_array($direction, ['asc, desc'])) {
+            if (!in_array($direction, ['asc', 'desc'])) {
                 throw new InvalidArgumentException('Invalid direction');
             }
         }

@@ -8,18 +8,20 @@
 
 namespace Mouf\Security\DAO;
 
-use Kls\Model\Bean\RolesRightBean;
 use Mouf\Database\TDBM\TDBMService;
 use Mouf\Database\TDBM\ResultIterator;
+use Mouf\Hydrator\TdbmHydrator;
 use Mouf\Security\Rights\RightsRegistry;
 use Mouf\Security\RightsService\RightInterface;
 use Mouf\Security\RightsService\RightsDaoInterface;
+use Mouf\Security\UserManagement\Api\RoleInterface;
+use Mouf\Security\UserManagement\Api\RoleRightDao;
 use Mouf\Security\UserService\UserDaoInterface;
 
 /**
  * This class provides a TDBM implementation of the RightsDaoInterface.
  */
-class SecurityRightDao implements RightsDaoInterface
+class SecurityRightDao implements RightsDaoInterface, RoleRightDao
 {
     /**
      * @var TDBMService
@@ -118,5 +120,61 @@ class SecurityRightDao implements RightsDaoInterface
     private function findOne($filter = null, array $parameters = [])
     {
         return $this->tdbmService->findObject('roles_rights', $filter, $parameters);
+    }
+
+    /**
+     * Sets a list of rights for the given role.
+     *
+     * @param RoleInterface $role
+     * @param RightInterface[] $rights
+     */
+    public function setRightsForRole(RoleInterface $role, array $rights)
+    {
+        $roleRights = $this->getRightsForRole($role);
+
+        $newRightsByName = [];
+        foreach ($rights as $right) {
+            $newRightsByName[$right->getName()] = $right->getName();
+        }
+
+        $oldRightsByName = [];
+        foreach ($roleRights as $right) {
+            $oldRightsByName[$right->getName()] = $right->getName();
+        }
+
+        foreach ($roleRights as $roleRight) {
+            if (!isset($newRightsByName[$roleRight->getRightKey()])) {
+                $this->tdbmService->delete($roleRight);
+            }
+        }
+
+        $hydrator = new TdbmHydrator();
+
+        foreach ($rights as $right) {
+            if (!isset($oldRightsByName[$roleRight->getRight()])) {
+                $object = $hydrator->hydrateNewObject([
+                    'roleId' => $role->getId(),
+                    'rightKey' => $right->getName()
+                ], $this->tdbmService->getBeanClassName('roles_rights'));
+
+                $this->tdbmService->save($object);
+            }
+        }
+    }
+
+    /**
+     * Sets a list of rights for the given role.
+     *
+     * @param RoleInterface $role
+     * @return RightInterface[]
+     */
+    public function getRightsForRole(RoleInterface $role)
+    {
+        // FIXME! This does not return a RightInterface!!!!
+        // We need to turn that into a MoufRight
+
+        return $this->find([
+            'roles.id' => $role->getId()
+        ]);
     }
 }

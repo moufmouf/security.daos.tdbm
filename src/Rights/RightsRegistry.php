@@ -3,11 +3,12 @@
 namespace Mouf\Security\Rights;
 
 use Mouf\Security\RightsService\RightInterface;
+use Mouf\Security\UserManagement\Api\RightDao;
 
 /**
  * This class registers all available rights in Mouf.
  */
-class RightsRegistry
+class RightsRegistry implements RightDao
 {
     /**
      * The list of all supported rights in the application, indexed by right name.
@@ -43,5 +44,15 @@ class RightsRegistry
         }
 
         return $this->rights[$name];
+    }
+
+    /**
+     * Returns a list of all rights
+     *
+     * @return RightInterface[]
+     */
+    public function getAllRights()
+    {
+        return $this->rights;
     }
 }
