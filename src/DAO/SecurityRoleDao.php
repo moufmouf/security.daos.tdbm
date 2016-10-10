@@ -11,6 +11,7 @@ namespace Mouf\Security\DAO;
 use Kls\Model\Bean\RolesRightBean;
 use Mouf\Database\TDBM\TDBMService;
 use Mouf\Database\TDBM\ResultIterator;
+use Mouf\Hydrator\TdbmHydrator;
 use Mouf\Security\Model\Role;
 use Mouf\Security\Rights\RightsRegistry;
 use Mouf\Security\RightsService\RightInterface;
@@ -33,12 +34,27 @@ class SecurityRoleDao implements RoleDao, RoleListDao
     protected $tdbmService;
 
     /**
+     * @var SecurityRightDao
+     */
+    private $securityRightDao;
+
+    /**
      * @param TDBMService    $tdbmService    Sets the TDBM service used by this DAO.
      */
     public function __construct(TDBMService $tdbmService)
     {
         $this->tdbmService = $tdbmService;
     }
+
+    /**
+     * @param SecurityRightDao $securityRightDao
+     */
+    public function setSecurityRightDao(SecurityRightDao $securityRightDao)
+    {
+        $this->securityRightDao = $securityRightDao;
+    }
+
+
 
 
     /**
@@ -103,7 +119,11 @@ class SecurityRoleDao implements RoleDao, RoleListDao
         return $this->tdbmService->findObjects('roles', $filter, $parameters, $orderBy, $additionalTablesFetch, $mode);
     }
 
-    private function findRoleById($roleId) {
+    /**
+     * @param string $roleId
+     * @return \Mouf\Database\TDBM\AbstractTDBMObject|RoleBean
+     */
+    public function findRoleById($roleId) {
         return $this->tdbmService->findObjectByPk('roles', [
             'id' => $roleId
         ]);
@@ -157,5 +177,53 @@ class SecurityRoleDao implements RoleDao, RoleListDao
         }
 
         return $this->tdbmService->findObjects('roles', $sql, $parameters, $orderBy.' '.$direction);
+    }
+
+    /**
+     * Creates a new role. Returns the role object.
+     *
+     * @param string $label
+     * @return RoleInterface
+     */
+    public function createRole(string $label) : RoleInterface
+    {
+        $hydrator = new TdbmHydrator();
+
+        // TODO: check unicity!
+
+        $object = $hydrator->hydrateNewObject([
+            'label' => $label
+        ], $this->tdbmService->getBeanClassName('roles'));
+
+        $this->tdbmService->save($object);
+
+        return self::castToRole($object);
+    }
+
+    /**
+     * Renames a role (changes the label).
+     *
+     * @param $roleId
+     * @param string $label
+     */
+    public function renameRole($roleId, string $label)
+    {
+        $role = $this->findRoleById($roleId);
+        $role->setLabel($label);
+        $this->tdbmService->save($role);
+    }
+
+    /**
+     * Deletes a role.
+     *
+     * @param string $roleId
+     */
+    public function deleteRole($roleId)
+    {
+        // Let's remove rights associated with this role.
+        $this->securityRightDao->setRightsForRole($this->getRoleById($roleId), []);
+
+        $role = $this->findRoleById($roleId);
+        $this->tdbmService->delete($role);
     }
 }

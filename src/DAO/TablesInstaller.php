@@ -29,7 +29,7 @@ class TablesInstaller implements PackageInstallerInterface
         $tdbmService = $moufManager->getInstanceDescriptor('tdbmService');
 
         // Let's create the instances.
-        $Mouf_Security_Rights_RightsRegistry = InstallUtils::getOrCreateInstance('Mouf\\Security\\Rights\\RightsRegistry', 'Mouf\\Security\\Rights\\RightsRegistry', $moufManager);
+        $Mouf_Security_Rights_RightsRegistry = InstallUtils::getOrCreateInstance('Mouf\\Security\\UserManagement\\Api\\RightDao', 'Mouf\\Security\\Rights\\RightsRegistry', $moufManager);
         $Mouf_Security_DAO_SecurityRightDao = InstallUtils::getOrCreateInstance('Mouf\\Security\\DAO\\SecurityRightDao', 'Mouf\\Security\\DAO\\SecurityRightDao', $moufManager);
         $Mouf_Security_DAO_SecurityUserDao = InstallUtils::getOrCreateInstance('Mouf\\Security\\DAO\\SecurityUserDao', 'Mouf\\Security\\DAO\\SecurityUserDao', $moufManager);
 

@@ -12,11 +12,12 @@ use Mouf\Database\TDBM\TDBMService;
 use Mouf\Database\TDBM\ResultIterator;
 use Mouf\Hydrator\TdbmHydrator;
 use Mouf\Security\Rights\RightsRegistry;
+use Mouf\Security\RightsService\MoufRight;
 use Mouf\Security\RightsService\RightInterface;
 use Mouf\Security\RightsService\RightsDaoInterface;
+use Mouf\Security\UserManagement\Api\RightDao;
 use Mouf\Security\UserManagement\Api\RoleInterface;
 use Mouf\Security\UserManagement\Api\RoleRightDao;
-use Mouf\Security\UserService\UserDaoInterface;
 
 /**
  * This class provides a TDBM implementation of the RightsDaoInterface.
@@ -36,13 +37,19 @@ class SecurityRightDao implements RightsDaoInterface, RoleRightDao
     protected $rightsRegistry;
 
     /**
-     * @param TDBMService    $tdbmService    Sets the TDBM service used by this DAO.
-     * @param RightsRegistry $rightsRegistry The list of all supported rights in the application.
+     * @var SecurityRoleDao
      */
-    public function __construct(TDBMService $tdbmService, RightsRegistry $rightsRegistry)
+    protected $roleDao;
+
+    /**
+     * @param TDBMService    $tdbmService    Sets the TDBM service used by this DAO.
+     * @param RightDao $rightsRegistry The list of all supported rights in the application.
+     */
+    public function __construct(TDBMService $tdbmService, RightDao $rightsRegistry, SecurityRoleDao $roleDao)
     {
         $this->tdbmService = $tdbmService;
         $this->rightsRegistry = $rightsRegistry;
+        $this->roleDao = $roleDao;
     }
 
     /**
@@ -130,7 +137,7 @@ class SecurityRightDao implements RightsDaoInterface, RoleRightDao
      */
     public function setRightsForRole(RoleInterface $role, array $rights)
     {
-        $roleRights = $this->getRightsForRole($role);
+        $roleRights = $this->getRoleRightForRole($role);
 
         $newRightsByName = [];
         foreach ($rights as $right) {
@@ -139,7 +146,7 @@ class SecurityRightDao implements RightsDaoInterface, RoleRightDao
 
         $oldRightsByName = [];
         foreach ($roleRights as $right) {
-            $oldRightsByName[$right->getName()] = $right->getName();
+            $oldRightsByName[$right->getRightKey()] = $right->getRightKey();
         }
 
         foreach ($roleRights as $roleRight) {
@@ -151,9 +158,9 @@ class SecurityRightDao implements RightsDaoInterface, RoleRightDao
         $hydrator = new TdbmHydrator();
 
         foreach ($rights as $right) {
-            if (!isset($oldRightsByName[$roleRight->getRight()])) {
+            if (!isset($oldRightsByName[$right->getName()])) {
                 $object = $hydrator->hydrateNewObject([
-                    'roleId' => $role->getId(),
+                    'role' => $this->roleDao->findRoleById($role->getId()),
                     'rightKey' => $right->getName()
                 ], $this->tdbmService->getBeanClassName('roles_rights'));
 
@@ -170,9 +177,17 @@ class SecurityRightDao implements RightsDaoInterface, RoleRightDao
      */
     public function getRightsForRole(RoleInterface $role)
     {
-        // FIXME! This does not return a RightInterface!!!!
-        // We need to turn that into a MoufRight
+        return $this->getRoleRightForRole($role)->map(function($roleRight) {
+            return new MoufRight($roleRight->getRightKey());
+        });
+    }
 
+    /**
+     * @param RoleInterface $role
+     * @return ResultIterator|ResultArray|RolesRightBean[]
+     */
+    private function getRoleRightForRole(RoleInterface $role)
+    {
         return $this->find([
             'roles.id' => $role->getId()
         ]);
